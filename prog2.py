@@ -1,28 +1,26 @@
 import tkinter as tk
 from tkinter import ttk, scrolledtext
 import time
-from sympy import isprime
 
-class CryptoApp:
+class RC4GeneratorApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Комбинированный генератор ПСП (RC4 + BBS)")
+        self.root.title("Генератор ПСП - алгоритм RC4")
         
-        # Параметры для RC4
-        self.rc4_key = [61, 60, 23, 22, 21, 20]
-        self.rc4_key_length = 6
+        # Параметры алгоритма
+        self.key = [61, 60, 23, 22, 21, 20]
+        self.key_length = 6
         
-        # Параметры для BBS
-        self.bbs_p = 24672462467892469787
-        self.bbs_q = 396736894567834589803
-        self.bbs_modulus = self.bbs_p * self.bbs_q
-        self.bbs_n = 256
-        
-        # Создание интерфейса
+        # Создание главного окна
         self.create_main_window()
-        self.create_rc4_params_window()
-        self.create_bbs_params_window()
+        
+        # Создание окна с информацией о параметрах
+        self.create_params_window()
+        
+        # Создание окна для вывода результатов
         self.create_output_window()
+        
+        # Создание окна для оценки скорости
         self.create_benchmark_window()
     
     def create_main_window(self):
@@ -30,193 +28,123 @@ class CryptoApp:
         self.main_frame = ttk.Frame(self.root, padding="10")
         self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # Ноутбук с вкладками
-        self.notebook = ttk.Notebook(self.main_frame)
-        self.notebook.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        
-        # Вкладка RC4
-        self.rc4_tab = ttk.Frame(self.notebook)
-        self.notebook.add(self.rc4_tab, text="RC4")
-        self.create_rc4_tab()
-        
-        # Вкладка BBS
-        self.bbs_tab = ttk.Frame(self.notebook)
-        self.notebook.add(self.bbs_tab, text="BBS")
-        self.create_bbs_tab()
-        
-        # Кнопки для окон параметров
-        buttons_frame = ttk.Frame(self.main_frame)
-        buttons_frame.grid(row=1, column=0, pady=10)
-        
-        ttk.Button(buttons_frame, text="Параметры RC4", command=self.show_rc4_params_window).grid(row=0, column=0, padx=5)
-        ttk.Button(buttons_frame, text="Параметры BBS", command=self.show_bbs_params_window).grid(row=0, column=1, padx=5)
-        ttk.Button(buttons_frame, text="Тест производительности", command=self.show_benchmark_window).grid(row=0, column=2, padx=5)
-    
-    def create_rc4_tab(self):
-        """Создание вкладки RC4"""
         # Поле для ввода сообщения
-        ttk.Label(self.rc4_tab, text="Сообщение:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.rc4_message_entry = scrolledtext.ScrolledText(self.rc4_tab, width=60, height=5, wrap=tk.WORD)
-        self.rc4_message_entry.grid(row=1, column=0, columnspan=2, pady=5)
-        self.rc4_message_entry.insert(tk.END, "Пример текста для шифрования")
+        ttk.Label(self.main_frame, text="Сообщение для шифрования:").grid(row=0, column=0, sticky=tk.W)
+        self.message_entry = scrolledtext.ScrolledText(self.main_frame, width=50, height=5, wrap=tk.WORD)
+        self.message_entry.grid(row=1, column=0, columnspan=2, pady=5)
+        self.message_entry.insert(tk.END, "Пример текста для шифрования")
         
-        # Поле для зашифрованного сообщения
-        ttk.Label(self.rc4_tab, text="Зашифрованное/расшифрованное сообщение:").grid(row=2, column=0, sticky=tk.W, pady=5)
-        self.rc4_encrypted_entry = scrolledtext.ScrolledText(self.rc4_tab, width=60, height=5, wrap=tk.WORD)
-        self.rc4_encrypted_entry.grid(row=3, column=0, columnspan=2, pady=5)
-        
-        # Поле для количества байт ПСП
-        ttk.Label(self.rc4_tab, text="Количество байт ПСП:").grid(row=4, column=0, sticky=tk.W, pady=5)
-        self.rc4_bytes_entry = ttk.Entry(self.rc4_tab, width=10)
-        self.rc4_bytes_entry.grid(row=4, column=1, sticky=tk.W, pady=5)
-        self.rc4_bytes_entry.insert(0, "256")
+        # Поле для выбора количества байт
+        ttk.Label(self.main_frame, text="Количество байт для генерации:").grid(row=2, column=0, sticky=tk.W)
+        self.bytes_entry = ttk.Entry(self.main_frame, width=10)
+        self.bytes_entry.grid(row=2, column=1, sticky=tk.W)
+        self.bytes_entry.insert(0, "256")
         
         # Кнопки
-        buttons_frame = ttk.Frame(self.rc4_tab)
-        buttons_frame.grid(row=5, column=0, columnspan=2, pady=10)
+        self.encrypt_button = ttk.Button(self.main_frame, text="Зашифровать сообщение", command=self.encrypt_message)
+        self.encrypt_button.grid(row=3, column=0, columnspan=2, pady=5)
         
-        ttk.Button(buttons_frame, text="Зашифровать", command=self.rc4_encrypt).grid(row=0, column=0, padx=5)
-        ttk.Button(buttons_frame, text="Расшифровать", command=self.rc4_decrypt).grid(row=0, column=1, padx=5)
-        ttk.Button(buttons_frame, text="Сгенерировать ПСП", command=self.rc4_generate_sequence).grid(row=0, column=2, padx=5)
-        ttk.Button(buttons_frame, text="Показать результаты", command=self.show_output_window).grid(row=0, column=3, padx=5)
+        self.generate_button = ttk.Button(self.main_frame, text="Сгенерировать ПСП", command=self.generate_sequence)
+        self.generate_button.grid(row=4, column=0, columnspan=2, pady=5)
+        
+        self.params_button = ttk.Button(self.main_frame, text="Параметры алгоритма", command=self.show_params_window)
+        self.params_button.grid(row=5, column=0, pady=5)
+        
+        self.benchmark_button = ttk.Button(self.main_frame, text="Тест производительности", command=self.show_benchmark_window)
+        self.benchmark_button.grid(row=5, column=1, pady=5)
     
-    def create_bbs_tab(self):
-        """Создание вкладки BBS"""
-        # Поле для ввода начального значения
-        ttk.Label(self.bbs_tab, text="Начальное значение (seed):").grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.bbs_seed_entry = ttk.Entry(self.bbs_tab, width=30)
-        self.bbs_seed_entry.grid(row=0, column=1, sticky=tk.W, pady=5)
-        self.bbs_seed_entry.insert(0, str(int(time.time())))
+    def create_params_window(self):
+        """Создание окна с информацией о параметрах"""
+        self.params_window = tk.Toplevel(self.root)
+        self.params_window.title("Параметры алгоритма RC4")
+        self.params_window.withdraw()
         
-        # Поле для количества бит
-        ttk.Label(self.bbs_tab, text="Количество бит:").grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.bbs_bits_entry = ttk.Entry(self.bbs_tab, width=10)
-        self.bbs_bits_entry.grid(row=1, column=1, sticky=tk.W, pady=5)
-        self.bbs_bits_entry.insert(0, str(self.bbs_n))
-        
-        # Кнопки
-        buttons_frame = ttk.Frame(self.bbs_tab)
-        buttons_frame.grid(row=2, column=0, columnspan=2, pady=10)
-        
-        ttk.Button(buttons_frame, text="Сгенерировать ПСП", command=self.bbs_generate_sequence).grid(row=0, column=0, padx=5)
-        ttk.Button(buttons_frame, text="Показать результаты", command=self.show_output_window).grid(row=0, column=1, padx=5)
-    
-    def create_rc4_params_window(self):
-        """Создание окна с параметрами RC4"""
-        self.rc4_params_window = tk.Toplevel(self.root)
-        self.rc4_params_window.title("Параметры алгоритма RC4")
-        self.rc4_params_window.withdraw()
-        
-        frame = ttk.Frame(self.rc4_params_window, padding="10")
+        frame = ttk.Frame(self.params_window, padding="10")
         frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         ttk.Label(frame, text="Параметры алгоритма RC4", font=('Helvetica', 12, 'bold')).grid(row=0, column=0, pady=5)
         
         ttk.Label(frame, text="Длина ключа:").grid(row=1, column=0, sticky=tk.W)
-        ttk.Label(frame, text=f"{self.rc4_key_length} байт").grid(row=1, column=1, sticky=tk.W)
+        ttk.Label(frame, text=f"{self.key_length} байт").grid(row=1, column=1, sticky=tk.W)
         
         ttk.Label(frame, text="Ключ (десятичные числа):").grid(row=2, column=0, sticky=tk.W)
-        ttk.Label(frame, text=', '.join(map(str, self.rc4_key))).grid(row=2, column=1, sticky=tk.W)
+        ttk.Label(frame, text=', '.join(map(str, self.key))).grid(row=2, column=1, sticky=tk.W)
         
         ttk.Label(frame, text="Ключ (шестнадцатеричный):").grid(row=3, column=0, sticky=tk.W)
-        ttk.Label(frame, text=', '.join([f"0x{byte:02X}" for byte in self.rc4_key])).grid(row=3, column=1, sticky=tk.W)
+        ttk.Label(frame, text=', '.join([f"0x{byte:02X}" for byte in self.key])).grid(row=3, column=1, sticky=tk.W)
         
-        ttk.Button(frame, text="Закрыть", command=self.rc4_params_window.withdraw).grid(row=4, column=0, columnspan=2, pady=10)
-    
-    def create_bbs_params_window(self):
-        """Создание окна с параметрами BBS"""
-        self.bbs_params_window = tk.Toplevel(self.root)
-        self.bbs_params_window.title("Параметры алгоритма BBS")
-        self.bbs_params_window.withdraw()
-        
-        frame = ttk.Frame(self.bbs_params_window, padding="10")
-        frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        
-        ttk.Label(frame, text="Параметры алгоритма BBS", font=('Helvetica', 12, 'bold')).grid(row=0, column=0, pady=5)
-        
-        ttk.Label(frame, text="p:").grid(row=1, column=0, sticky=tk.W)
-        ttk.Label(frame, text=str(self.bbs_p)).grid(row=1, column=1, sticky=tk.W)
-        
-        ttk.Label(frame, text="q:").grid(row=2, column=0, sticky=tk.W)
-        ttk.Label(frame, text=str(self.bbs_q)).grid(row=2, column=1, sticky=tk.W)
-        
-        ttk.Label(frame, text="Модуль (n = p*q):").grid(row=3, column=0, sticky=tk.W)
-        ttk.Label(frame, text=str(self.bbs_modulus)).grid(row=3, column=1, sticky=tk.W)
-        
-        ttk.Label(frame, text="Длина выходного блока:").grid(row=4, column=0, sticky=tk.W)
-        ttk.Label(frame, text=str(self.bbs_n)).grid(row=4, column=1, sticky=tk.W)
-        
-        ttk.Button(frame, text="Закрыть", command=self.bbs_params_window.withdraw).grid(row=5, column=0, columnspan=2, pady=10)
+        ttk.Button(frame, text="Закрыть", command=self.params_window.withdraw).grid(row=4, column=0, columnspan=2, pady=10)
     
     def create_output_window(self):
         """Создание окна для вывода результатов"""
         self.output_window = tk.Toplevel(self.root)
-        self.output_window.title("Результаты генерации ПСП")
+        self.output_window.title("Результаты работы RC4")
         self.output_window.withdraw()
         
         frame = ttk.Frame(self.output_window, padding="10")
         frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        self.output_notebook = ttk.Notebook(frame)
-        self.output_notebook.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # Ноутбук с вкладками
+        self.notebook = ttk.Notebook(frame)
+        self.notebook.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # Вкладка для RC4
-        self.rc4_output_tab = ttk.Frame(self.output_notebook)
-        self.output_notebook.add(self.rc4_output_tab, text="RC4")
+        # Вкладка с исходным текстом
+        self.original_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.original_tab, text="Исходное сообщение")
+        self.original_text = scrolledtext.ScrolledText(self.original_tab, wrap=tk.WORD, width=70, height=15)
+        self.original_text.pack(fill=tk.BOTH, expand=True)
         
-        self.rc4_output_text = scrolledtext.ScrolledText(self.rc4_output_tab, wrap=tk.WORD, width=80, height=20)
-        self.rc4_output_text.pack(fill=tk.BOTH, expand=True)
+        # Вкладка с зашифрованным текстом
+        self.encrypted_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.encrypted_tab, text="Зашифрованное сообщение")
+        self.encrypted_text = scrolledtext.ScrolledText(self.encrypted_tab, wrap=tk.WORD, width=70, height=15)
+        self.encrypted_text.pack(fill=tk.BOTH, expand=True)
         
-        # Вкладка для BBS
-        self.bbs_output_tab = ttk.Frame(self.output_notebook)
-        self.output_notebook.add(self.bbs_output_tab, text="BBS")
-        
-        self.bbs_output_text = scrolledtext.ScrolledText(self.bbs_output_tab, wrap=tk.WORD, width=80, height=20)
-        self.bbs_output_text.pack(fill=tk.BOTH, expand=True)
+        # Вкладка с ПСП
+        self.sequence_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.sequence_tab, text="ПСП")
+        self.sequence_text = scrolledtext.ScrolledText(self.sequence_tab, wrap=tk.WORD, width=70, height=15)
+        self.sequence_text.pack(fill=tk.BOTH, expand=True)
         
         ttk.Button(frame, text="Закрыть", command=self.output_window.withdraw).grid(row=1, column=0, pady=10)
     
     def create_benchmark_window(self):
-        """Создание окна для тестирования производительности"""
+        """Создание окна для оценки скорости"""
         self.benchmark_window = tk.Toplevel(self.root)
-        self.benchmark_window.title("Тест производительности")
+        self.benchmark_window.title("Тест производительности RC4")
         self.benchmark_window.withdraw()
         
         frame = ttk.Frame(self.benchmark_window, padding="10")
         frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        ttk.Label(frame, text="Тест производительности алгоритмов", font=('Helvetica', 12, 'bold')).grid(row=0, column=0, pady=5)
+        ttk.Label(frame, text="Тест производительности алгоритма RC4", font=('Helvetica', 12, 'bold')).grid(row=0, column=0, pady=5)
         
-        self.benchmark_text = scrolledtext.ScrolledText(frame, wrap=tk.WORD, width=80, height=20)
+        self.benchmark_text = scrolledtext.ScrolledText(frame, wrap=tk.WORD, width=70, height=15)
         self.benchmark_text.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        ttk.Button(frame, text="Запустить тест RC4", command=self.run_rc4_benchmark).grid(row=2, column=0, pady=5)
-        ttk.Button(frame, text="Запустить тест BBS", command=self.run_bbs_benchmark).grid(row=3, column=0, pady=5)
-        ttk.Button(frame, text="Закрыть", command=self.benchmark_window.withdraw).grid(row=4, column=0, pady=5)
+        ttk.Button(frame, text="Запустить тест", command=self.run_benchmark).grid(row=2, column=0, pady=5)
+        ttk.Button(frame, text="Закрыть", command=self.benchmark_window.withdraw).grid(row=3, column=0, pady=5)
     
-    def show_rc4_params_window(self):
-        """Показать окно параметров RC4"""
-        self.rc4_params_window.deiconify()
-    
-    def show_bbs_params_window(self):
-        """Показать окно параметров BBS"""
-        self.bbs_params_window.deiconify()
+    def show_params_window(self):
+        """Показать окно параметров"""
+        self.params_window.deiconify()
     
     def show_output_window(self):
         """Показать окно вывода"""
         self.output_window.deiconify()
+        self.notebook.select(0)  # Показать первую вкладку
     
     def show_benchmark_window(self):
         """Показать окно тестирования"""
         self.benchmark_window.deiconify()
     
     def rc4_init(self):
-        """Инициализация S-блока для RC4"""
+        """Инициализация S-блока (KSA)"""
         S = list(range(256))
         j = 0
         
         # Повторяем ключ, если он короче 256 байт
-        key = self.rc4_key * (256 // len(self.rc4_key)) + self.rc4_key[:256 % len(self.rc4_key)]
+        key = self.key * (256 // len(self.key)) + self.key[:256 % len(self.key)]
         
         for i in range(256):
             j = (j + S[i] + key[i]) % 256
@@ -225,7 +153,7 @@ class CryptoApp:
         return S
     
     def rc4_generate(self, S, length):
-        """Генерация псевдослучайной последовательности RC4"""
+        """Генерация псевдослучайной последовательности (PRGA)"""
         i = j = 0
         result = []
         
@@ -238,9 +166,9 @@ class CryptoApp:
         
         return result
     
-    def rc4_encrypt(self):
+    def encrypt_message(self):
         """Шифрование сообщения с использованием RC4"""
-        message = self.rc4_message_entry.get("1.0", tk.END).strip()
+        message = self.message_entry.get("1.0", tk.END).strip()
         if not message:
             return
         
@@ -255,64 +183,25 @@ class CryptoApp:
         for i in range(len(message)):
             encrypted.append(ord(message[i]) ^ key_stream[i])
         
-        # Отображение зашифрованного сообщения
-        self.rc4_encrypted_entry.delete(1.0, tk.END)
-        self.rc4_encrypted_entry.insert(tk.END, ' '.join([f"{byte:02X}" for byte in encrypted]))
+        # Отображение результатов
+        self.original_text.delete(1.0, tk.END)
+        self.original_text.insert(tk.END, message)
         
-        # Сохранение результатов для окна вывода
-        self.rc4_output_text.delete(1.0, tk.END)
-        self.rc4_output_text.insert(tk.END, "Исходное сообщение:\n")
-        self.rc4_output_text.insert(tk.END, message + "\n\n")
-        self.rc4_output_text.insert(tk.END, "Зашифрованное сообщение (HEX):\n")
-        self.rc4_output_text.insert(tk.END, ' '.join([f"{byte:02X}" for byte in encrypted]) + "\n\n")
-        self.rc4_output_text.insert(tk.END, "Ключевой поток (первые 256 байт):\n")
-        self.rc4_output_text.insert(tk.END, ' '.join([f"{byte:02X}" for byte in key_stream[:256]]))
+        self.encrypted_text.delete(1.0, tk.END)
+        self.encrypted_text.insert(tk.END, ' '.join([f"{byte:02X}" for byte in encrypted]))
+        
+        self.sequence_text.delete(1.0, tk.END)
+        self.sequence_text.insert(tk.END, ' '.join([f"{byte:02X}" for byte in key_stream]))
+        
+        self.show_output_window()
     
-    def rc4_decrypt(self):
-        """Дешифрование сообщения с использованием RC4"""
-        encrypted_hex = self.rc4_encrypted_entry.get("1.0", tk.END).strip()
-        if not encrypted_hex:
-            return
-        
+    def generate_sequence(self):
+        """Генерация ПСП заданной длины"""
         try:
-            # Преобразование HEX строки в байты
-            encrypted = [int(hex_byte, 16) for hex_byte in encrypted_hex.split()]
+            length = int(self.bytes_entry.get())
         except ValueError:
-            self.rc4_encrypted_entry.delete(1.0, tk.END)
-            self.rc4_encrypted_entry.insert(tk.END, "Ошибка: некорректный HEX формат")
-            return
-        
-        # Инициализация RC4
-        S = self.rc4_init()
-        
-        # Генерация ключевого потока
-        key_stream = self.rc4_generate(S, len(encrypted))
-        
-        # Дешифрование (XOR с ключевым потоком)
-        decrypted = []
-        for i in range(len(encrypted)):
-            decrypted.append(chr(encrypted[i] ^ key_stream[i]))
-        
-        # Отображение расшифрованного сообщения
-        self.rc4_message_entry.delete(1.0, tk.END)
-        self.rc4_message_entry.insert(tk.END, ''.join(decrypted))
-        
-        # Сохранение результатов для окна вывода
-        self.rc4_output_text.delete(1.0, tk.END)
-        self.rc4_output_text.insert(tk.END, "Зашифрованное сообщение (HEX):\n")
-        self.rc4_output_text.insert(tk.END, encrypted_hex + "\n\n")
-        self.rc4_output_text.insert(tk.END, "Расшифрованное сообщение:\n")
-        self.rc4_output_text.insert(tk.END, ''.join(decrypted) + "\n\n")
-        self.rc4_output_text.insert(tk.END, "Ключевой поток (первые 256 байт):\n")
-        self.rc4_output_text.insert(tk.END, ' '.join([f"{byte:02X}" for byte in key_stream[:256]]))
-    
-    def rc4_generate_sequence(self):
-        """Генерация ПСП с использованием RC4"""
-        try:
-            length = int(self.rc4_bytes_entry.get())
-        except ValueError:
-            self.rc4_output_text.delete(1.0, tk.END)
-            self.rc4_output_text.insert(tk.END, "Ошибка: введите корректное число байт")
+            self.sequence_text.delete(1.0, tk.END)
+            self.sequence_text.insert(tk.END, "Ошибка: введите корректное число байт")
             self.show_output_window()
             return
         
@@ -322,66 +211,27 @@ class CryptoApp:
         # Генерация последовательности
         sequence = self.rc4_generate(S, length)
         
-        # Сохранение результатов для окна вывода
-        self.rc4_output_text.delete(1.0, tk.END)
-        self.rc4_output_text.insert(tk.END, f"Сгенерированная ПСП (первые 1024 байта из {length}):\n\n")
+        # Отображение результатов
+        self.original_text.delete(1.0, tk.END)
+        self.original_text.insert(tk.END, "Генерация ПСП без исходного сообщения")
+        
+        self.encrypted_text.delete(1.0, tk.END)
+        self.encrypted_text.insert(tk.END, "Не применимо")
+        
+        self.sequence_text.delete(1.0, tk.END)
         
         # Форматированный вывод (16 байт в строке)
-        hex_sequence = [f"{byte:02X}" for byte in sequence[:1024]]
+        hex_sequence = [f"{byte:02X}" for byte in sequence]
         for i in range(0, len(hex_sequence), 16):
             line = ' '.join(hex_sequence[i:i+16])
-            self.rc4_output_text.insert(tk.END, line + '\n')
+            self.sequence_text.insert(tk.END, line + '\n')
         
         self.show_output_window()
-        self.output_notebook.select(0)  # Выбрать вкладку RC4
     
-    def bbs_generate_sequence(self):
-        """Генерация ПСП с использованием BBS"""
-        try:
-            seed = int(self.bbs_seed_entry.get())
-            bits = int(self.bbs_bits_entry.get())
-        except ValueError:
-            self.bbs_output_text.delete(1.0, tk.END)
-            self.bbs_output_text.insert(tk.END, "Ошибка: введите корректные числовые значения")
-            self.show_output_window()
-            return
-        
-        if seed <= 1 or seed >= self.bbs_modulus:
-            self.bbs_output_text.delete(1.0, tk.END)
-            self.bbs_output_text.insert(tk.END, f"Ошибка: seed должен быть 1 < seed < {self.bbs_modulus}")
-            self.show_output_window()
-            return
-        
-        # Генерация последовательности
-        x = (seed * seed) % self.bbs_modulus
-        sequence = []
-        
-        for _ in range(bits):
-            x = (x * x) % self.bbs_modulus
-            bit = x % 2
-            sequence.append(str(bit))
-        
-        # Преобразование в 32-битные блоки для удобства чтения
-        binary_str = ''.join(sequence)
-        
-        # Сохранение результатов для окна вывода
-        self.bbs_output_text.delete(1.0, tk.END)
-        self.bbs_output_text.insert(tk.END, f"Параметры генерации:\n")
-        self.bbs_output_text.insert(tk.END, f"Начальное значение (seed): {seed}\n")
-        self.bbs_output_text.insert(tk.END, f"Модуль (n): {self.bbs_modulus}\n")
-        self.bbs_output_text.insert(tk.END, f"Количество бит: {bits}\n\n")
-        self.bbs_output_text.insert(tk.END, "Сгенерированная последовательность:\n\n")
-        
-        for i in range(0, len(binary_str), 32):
-            self.bbs_output_text.insert(tk.END, binary_str[i:i+32] + "\n")
-        
-        self.show_output_window()
-        self.output_notebook.select(1)  # Выбрать вкладку BBS
-    
-    def run_rc4_benchmark(self):
-        """Тестирование производительности RC4"""
+    def run_benchmark(self):
+        """Тестирование производительности алгоритма"""
         self.benchmark_text.delete(1.0, tk.END)
-        self.benchmark_text.insert(tk.END, "Запуск теста производительности RC4...\n")
+        self.benchmark_text.insert(tk.END, "Запуск теста производительности...\n")
         self.benchmark_window.update()
         
         test_sizes = [100, 1000, 10000, 100000, 1000000]
@@ -404,38 +254,9 @@ class CryptoApp:
                 f"Размер: {size} байт, Время: {elapsed:.6f} сек, Скорость: {speed:,.0f} байт/сек\n")
             self.benchmark_window.update()
         
-        self.benchmark_text.insert(tk.END, "\nТест RC4 завершен\n")
-    
-    def run_bbs_benchmark(self):
-        """Тестирование производительности BBS"""
-        self.benchmark_text.delete(1.0, tk.END)
-        self.benchmark_text.insert(tk.END, "Запуск теста производительности BBS...\n")
-        self.benchmark_window.update()
-        
-        test_sizes = [100, 1000, 10000, 100000, 1000000]
-        results = []
-        seed = int(time.time()) % self.bbs_modulus
-        
-        for size in test_sizes:
-            start_time = time.time()
-            
-            # Генерация последовательности
-            x = (seed * seed) % self.bbs_modulus
-            for _ in range(size):
-                x = (x * x) % self.bbs_modulus
-                _ = x % 2
-            
-            elapsed = time.time() - start_time
-            speed = size / elapsed  # бит/сек
-            results.append((size, elapsed, speed))
-            
-            self.benchmark_text.insert(tk.END, 
-                f"Размер: {size} бит, Время: {elapsed:.6f} сек, Скорость: {speed:,.0f} бит/сек\n")
-            self.benchmark_window.update()
-        
-        self.benchmark_text.insert(tk.END, "\nТест BBS завершен\n")
+        self.benchmark_text.insert(tk.END, "\nТест завершен\n")
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = CryptoApp(root)
+    app = RC4GeneratorApp(root)
     root.mainloop()
